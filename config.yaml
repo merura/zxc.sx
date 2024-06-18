@@ -36,6 +36,11 @@ params:
     - name: "rss"
       url: "/index.xml"
 
+  editPost:
+    URL: "https://github.com/tshipenchko/zxc.sx/edit/master/content"
+    Text: "Suggest Changes"
+    appendFilePath: true
+
   defaultTheme: "dark"
   ShowReadingTime: true
   ShowPostNavLinks: true
