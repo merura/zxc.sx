@@ -1,0 +1,6 @@
+github.com/bigskysoftware/idiomorph v0.3.0 h1:oBY+wmTfvMOFmzPhmutv2JQJGl/hO/wLABF3+Y9R9ZE=
+github.com/bigskysoftware/idiomorph v0.3.0/go.mod h1:rS0FeLewyCnz7kx5cj1r1oMY3FvN/nj6x8x6jW0Fmt8=
+github.com/gohugoio/hugo-mod-jslibs/turbo/v8 v8.20000.20400 h1:seW12itszTjMSn7fnUidxVUtdZ+m584IbRhduXVX+KY=
+github.com/gohugoio/hugo-mod-jslibs/turbo/v8 v8.20000.20400/go.mod h1:gAQtWxUfqoxdC/o0SiBSia1k5ncYDtAaynRKy7+5p7g=
+github.com/hotwired/turbo v8.0.4+incompatible h1:5kl0vGFKE9TUidGu0kQjbCU8mTuEg/Jugf0rtSA6OEk=
+github.com/hotwired/turbo v8.0.4+incompatible/go.mod h1:6XcpYEC+j8xb7URpSYwhlq4iq98M5F5T/jaLWNHVbZs=
