@@ -1,5 +1,5 @@
 ---
-title: "Docker"
+title: "How to install Docker on Linux"
 date: 2024-06-18T23:03:02+05:00
 tags: [ "docker" ]
 categories: [ "guide" ]
