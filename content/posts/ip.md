@@ -40,7 +40,7 @@ wget -qO- ident.me
 wget -qO- ip.zxc.sx
 ```
 ```bash
-wget -qO- ifconfig.me
+wget -qO- -U "curl/8.13.0" ifconfig.me
 ```
 ```bash
 wget -qO- icanhazip.com
@@ -60,7 +60,7 @@ If you don't have anything rather than shell (sh, bash) and awk, you can use the
 (exec 3<>/dev/tcp/ip.zxc.sx/80; echo -e "GET / HTTP/1.0\nHost: ip.zxc.sx\n" >&3; awk 'NR>1 { print }' RS='\r\n\r\n' <&3)
 ```
 ```bash
-(exec 3<>/dev/tcp/ifconfig.me/80; echo -e "GET / HTTP/1.0\nHost: ifconfig.me\n" >&3; awk 'NR>1 { print }' RS='\r\n\r\n' <&3)
+(exec 3<>/dev/tcp/ifconfig.me/80; echo -e "GET / HTTP/1.1\nHost: ifconfig.me\nUser-Agent: curl/8.13.0\n" >&3; awk 'NR>1 { print }' RS='\r\n\r\n' <&3)
 ```
 ```bash
 (exec 3<>/dev/tcp/icanhazip.com/80; echo -e "GET / HTTP/1.0\nHost: icanhazip.com\n" >&3; awk 'NR>1 { print }' RS='\r\n\r\n' <&3)
@@ -80,7 +80,7 @@ If you have ONLY shell, you can use the following command.
 (exec 3<>/dev/tcp/ip.zxc.sx/80; echo -e "GET / HTTP/1.0\nHost: ip.zxc.sx\n" >&3; cat <&3)
 ```
 ```bash
-(exec 3<>/dev/tcp/ifconfig.me/80; echo -e "GET / HTTP/1.0\nHost: ifconfig.me\n" >&3; cat <&3)
+(exec 3<>/dev/tcp/ifconfig.me/80; echo -e "GET / HTTP/1.1\nHost: ifconfig.me\nUser-Agent: curl/8.13.0\n" >&3; cat <&3)
 ```
 ```bash
 (exec 3<>/dev/tcp/icanhazip.com/80; echo -e "GET / HTTP/1.0\nHost: icanhazip.com\n" >&3; cat <&3)
