@@ -48,7 +48,9 @@ wget -qO- icanhazip.com
 ```bash
 wget -qO- ipinfo.io
 ```
-> Note that 2ip.ru doesn't support wget.
+```bash
+wget -qO- -U "curl/8.13.0" 2ip.ru
+```
 
 If you don't have anything rather than shell (sh, bash) and awk, you can use the following command.
 ```bash
@@ -66,7 +68,9 @@ If you don't have anything rather than shell (sh, bash) and awk, you can use the
 ```bash
 (exec 3<>/dev/tcp/ipinfo.io/80; echo -e "GET / HTTP/1.0\nHost: ipinfo.io\n" >&3; awk 'NR>1 { print }' RS='\r\n\r\n' <&3)
 ```
-> Note that 2ip.ru doesn't support this method.
+```bash
+(exec 3<>/dev/tcp/2ip.ru/80; echo -e "GET / HTTP/1.1\nHost: 2ip.ru\nUser-Agent: curl/8.13.0\nConnection: close\n" >&3; awk 'NR>1 { print }' RS='\r\n\r\n' <&3)
+```
 
 If you have ONLY shell, you can use the following command.
 ```bash
@@ -84,7 +88,9 @@ If you have ONLY shell, you can use the following command.
 ```bash
 (exec 3<>/dev/tcp/ipinfo.io/80; echo -e "GET / HTTP/1.0\nHost: ipinfo.io\n" >&3; cat <&3)
 ```
-> Note that 2ip.ru doesn't support this method.
+```bash
+(exec 3<>/dev/tcp/2ip.ru/80; echo -e "GET / HTTP/1.1\nHost: 2ip.ru\nUser-Agent: curl/8.13.0\nConnection: close\n" >&3; cat <&3)
+```
 
 Just by the way, here is the source code of the ip.zxc.sx.
 ```php
