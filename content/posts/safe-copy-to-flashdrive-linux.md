@@ -23,6 +23,13 @@ sync
 umount /mnt/usb
 ```
 
+### Linux vs Windows write cache behavior
+On Linux, if you run `umount` without `sync` first, `umount` may take a while.
+That is normal: Linux flushes pending cached writes before it completes unmount.
+
+On Windows, removable drives are usually configured for quick removal, so writes are flushed more aggressively.
+Because of that, eject is often instant after copy is fully completed, and people often remove drives without manual eject.
+
 ### Copy with stronger write guarantees
 If you want to reduce cache effects during writing, use tools that flush writes:
 
@@ -37,7 +44,7 @@ rsync --fsync file.txt /mnt/usb/
 `oflag=dsync` and `--fsync` make writes more explicit and safer for removable media workflows.
 
 ### Seeing sync progress
-If you want visible sync progress (instead of waiting blindly), I use this helper script:
+If you want visible sync progress (instead of waiting blindly), use this helper script:
 
 - https://gist.github.com/merura/387c5fa55ecf5ede58412f7e0d114c04
 
