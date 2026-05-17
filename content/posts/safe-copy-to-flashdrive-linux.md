@@ -44,9 +44,7 @@ rsync --fsync file.txt /mnt/usb/
 `oflag=dsync` and `--fsync` make writes more explicit and safer for removable media workflows.
 
 ### Seeing sync progress
-If you want visible sync progress (instead of waiting blindly), use this helper script:
-
-- https://gist.github.com/merura/387c5fa55ecf5ede58412f7e0d114c04
+If you want visible sync progress (instead of waiting blindly), use this [helper script](https://gist.github.com/merura/387c5fa55ecf5ede58412f7e0d114c04).
 
 It wraps `sync` and shows progress/ETA based on dirty pages, which is useful before unplugging a drive.
 
