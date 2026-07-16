@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ping Log Analyzer — zxc.sx</title>
+<style>
+  :root {
+    --bg: #0f1115;
+    --panel: #171a21;
+    --panel-hover: #1c2029;
+    --line: #2a2e38;
+    --text: #e6e8ec;
+    --muted: #9099a8;
+    --accent: #5b9dff;
+    --bad: #ff5c6c;
+    --warn: #ffb84d;
+    --good: #4dd68a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    margin: 0;
+    padding: 24px;
+    min-height: 100vh;
+  }
+  .wrap { max-width: 1100px; margin: 0 auto; }
+  h1 { font-size: 19px; margin: 0 0 4px 0; font-weight: 600; letter-spacing: -0.01em; }
+  .subtitle { color: var(--muted); font-size: 13px; margin-bottom: 22px; }
+
+  /* Drop zone */
+  #dropzone {
+    border: 1.5px dashed var(--line);
+    border-radius: 14px;
+    padding: 40px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    background: var(--panel);
+  }
+  #dropzone:hover, #dropzone.drag { border-color: var(--accent); background: var(--panel-hover); }
+  #dropzone .icon { font-size: 28px; margin-bottom: 10px; opacity: 0.8; }
+  #dropzone .main-text { font-size: 14px; font-weight: 500; }
+  #dropzone .sub-text { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  #fileInput { display: none; }
+
+  #fileBar {
+    display: none;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 10px 16px;
+    margin-bottom: 18px;
+    font-size: 13px;
+  }
+  #fileBar .fname { color: var(--text); font-weight: 500; }
+  #fileBar .frows { color: var(--muted); margin-left: 8px; }
+  #fileBar button {
+    background: transparent;
+    border: 1px solid var(--line);
+    color: var(--muted);
+    border-radius: 7px;
+    padding: 5px 11px;
+    font-size: 12px;
+    cursor: pointer;
+  }
+  #fileBar button:hover { color: var(--text); border-color: var(--muted); }
+
+  #report { display: none; }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  .stat {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 12px 14px;
+  }
+  .stat .label { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.03em; }
+  .stat .value { font-size: 20px; font-weight: 600; margin-top: 4px; }
+  .stat .value.bad { color: var(--bad); }
+  .stat .value.warn { color: var(--warn); }
+
+  .chart-panel {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 20px;
+  }
+  .chart-panel h2 { font-size: 13px; color: var(--muted); margin: 0 0 10px 0; font-weight: 500; text-transform: uppercase; letter-spacing: 0.03em; }
+  canvas { max-height: 320px; }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    overflow: hidden;
+    font-size: 13px;
+  }
+  th, td { padding: 9px 12px; text-align: left; border-bottom: 1px solid var(--line); }
+  th { color: var(--muted); font-weight: 500; font-size: 11px; text-transform: uppercase; letter-spacing: 0.03em; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(255,255,255,0.02); }
+  .dur-cell { font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .dur-bar { display: inline-block; height: 6px; background: var(--bad); border-radius: 3px; vertical-align: middle; margin-right: 8px; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+  .badge.major { background: rgba(255,92,108,0.15); color: var(--bad); }
+  .badge.minor { background: rgba(255,184,77,0.15); color: var(--warn); }
+  .note { color: var(--muted); font-size: 12px; margin-top: 10px; line-height: 1.5; }
+  #errorMsg { color: var(--bad); font-size: 13px; margin-top: 12px; display: none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Connection Log Analyzer</h1>
+  <div class="subtitle">Drop a ping-log CSV (Timestamp, Ping (ms), Jitter (ms)) — e.g. exported from <a href="http://pingpackettest.com/" style="color:var(--accent)">pingpackettest.com</a> — to generate a loss/latency report in your browser. Nothing is uploaded anywhere, parsing happens entirely client-side. See <a href="/posts/measure-network-stability/" style="color:var(--accent)">how to use it</a>.</div>
+
+  <div id="dropzone">
+    <div class="icon">&#8628;</div>
+    <div class="main-text">Drop CSV file here, or click to browse</div>
+    <div class="sub-text">Parsed entirely client-side</div>
+  </div>
+  <input type="file" id="fileInput" accept=".csv,text/csv">
+  <div id="errorMsg"></div>
+
+  <div id="fileBar">
+    <div><span class="fname" id="fnameLabel"></span><span class="frows" id="frowsLabel"></span></div>
+    <button id="clearBtn">Load different file</button>
+  </div>
+
+  <div id="report">
+    <div class="stats-grid" id="stats"></div>
+
+    <div class="chart-panel">
+      <h2>Latency over time (gaps = packet loss)</h2>
+      <canvas id="mainChart"></canvas>
+    </div>
+
+    <div class="chart-panel">
+      <h2>Loss density per 10s window</h2>
+      <canvas id="lossChart"></canvas>
+    </div>
+
+    <div class="chart-panel">
+      <h2>Drop events, sorted by severity</h2>
+      <table>
+        <thead>
+          <tr><th>Start</th><th>End</th><th>Duration</th><th>Packets lost</th><th></th></tr>
+        </thead>
+        <tbody id="eventsBody"></tbody>
+      </table>
+      <div class="note">Consecutive missed pings are grouped into a single "event". Events under ~0.3s are likely single-packet blips; anything running several seconds or more represents a real connectivity outage.</div>
+    </div>
+  </div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script>
+let mainChart = null;
+let lossChart = null;
+
+const dropzone = document.getElementById('dropzone');
+const fileInput = document.getElementById('fileInput');
+const fileBar = document.getElementById('fileBar');
+const errorMsg = document.getElementById('errorMsg');
+const reportEl = document.getElementById('report');
+
+dropzone.addEventListener('click', () => fileInput.click());
+dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('drag'); });
+dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag'));
+dropzone.addEventListener('drop', (e) => {
+  e.preventDefault();
+  dropzone.classList.remove('drag');
+  if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener('change', (e) => {
+  if (e.target.files.length) handleFile(e.target.files[0]);
+});
+document.getElementById('clearBtn').addEventListener('click', () => {
+  fileBar.style.display = 'none';
+  reportEl.style.display = 'none';
+  dropzone.style.display = 'block';
+  errorMsg.style.display = 'none';
+  fileInput.value = '';
+});
+
+function showError(msg) {
+  errorMsg.textContent = msg;
+  errorMsg.style.display = 'block';
+}
+
+function handleFile(file) {
+  errorMsg.style.display = 'none';
+  Papa.parse(file, {
+    header: true,
+    skipEmptyLines: true,
+    complete: (results) => {
+      try {
+        processData(results.data, file.name);
+      } catch (err) {
+        showError('Could not parse this file: ' + err.message);
+        console.error(err);
+      }
+    },
+    error: (err) => showError('Failed to read file: ' + err.message)
+  });
+}
+
+function findColumn(fields, candidates) {
+  const lower = fields.map(f => f.toLowerCase());
+  for (const cand of candidates) {
+    const idx = lower.findIndex(f => f.includes(cand));
+    if (idx !== -1) return fields[idx];
+  }
+  return null;
+}
+
+function processData(rows, fname) {
+  if (!rows.length) { showError('The file has no data rows.'); return; }
+  const fields = Object.keys(rows[0]);
+  const tsCol = findColumn(fields, ['timestamp', 'time', 'date']);
+  const pingCol = findColumn(fields, ['ping', 'latency', 'rtt']);
+  if (!tsCol || !pingCol) {
+    showError('Could not find Timestamp / Ping columns. Expected headers like "Timestamp" and "Ping (ms)".');
+    return;
+  }
+
+  const series = []; // {ts: Date, tMs: number, ping: number|null}
+  let t0 = null;
+
+  for (const row of rows) {
+    const rawTs = row[tsCol];
+    const rawPing = row[pingCol];
+    if (!rawTs) continue;
+    const ts = new Date(rawTs.replace(' ', 'T'));
+    if (isNaN(ts.getTime())) continue;
+    if (t0 === null) t0 = ts;
+
+    let pingVal = null;
+    if (rawPing !== undefined && rawPing !== null) {
+      const trimmed = String(rawPing).trim();
+      const num = parseFloat(trimmed);
+      if (!isNaN(num) && /^-?\d+(\.\d+)?$/.test(trimmed)) {
+        pingVal = num;
+      } else {
+        pingVal = null; // PACKET_LOSS, TIMEOUT, N/A, empty, etc.
+      }
+    }
+    series.push({ ts, tMs: ts - t0, ping: pingVal });
+  }
+
+  if (!series.length) { showError('No valid rows with parseable timestamps were found.'); return; }
+
+  fileBar.style.display = 'flex';
+  document.getElementById('fnameLabel').textContent = fname;
+  document.getElementById('frowsLabel').textContent = `${series.length} rows parsed`;
+  dropzone.style.display = 'none';
+  reportEl.style.display = 'block';
+
+  renderReport(series);
+}
+
+function fmtTime(d) {
+  const hh = String(d.getHours()).padStart(2,'0');
+  const mm = String(d.getMinutes()).padStart(2,'0');
+  const ss = String(d.getSeconds()).padStart(2,'0');
+  const ms = String(d.getMilliseconds()).padStart(3,'0');
+  return `${hh}:${mm}:${ss}.${ms}`;
+}
+function fmtTimeShort(d) {
+  const hh = String(d.getHours()).padStart(2,'0');
+  const mm = String(d.getMinutes()).padStart(2,'0');
+  const ss = String(d.getSeconds()).padStart(2,'0');
+  return `${hh}:${mm}:${ss}`;
+}
+
+function renderReport(series) {
+  // ---- events (consecutive loss grouping) ----
+  const events = [];
+  let i = 0;
+  while (i < series.length) {
+    if (series[i].ping === null) {
+      let j = i;
+      while (j < series.length && series[j].ping === null) j++;
+      const start = series[i].ts, end = series[j-1].ts;
+      events.push({
+        start, end,
+        startStr: fmtTime(start), endStr: fmtTime(end),
+        count: j - i,
+        dur: (end - start) / 1000
+      });
+      i = j;
+    } else {
+      i++;
+    }
+  }
+  events.sort((a,b) => b.count - a.count);
+
+  // ---- stats ----
+  const total = series.length;
+  const lost = series.filter(p => p.ping === null).length;
+  const lossPct = (100*lost/total).toFixed(2);
+  const goodPings = series.filter(p => p.ping !== null).map(p => p.ping);
+  const avgPing = goodPings.length ? (goodPings.reduce((a,b)=>a+b,0)/goodPings.length).toFixed(0) : '-';
+  const maxPing = goodPings.length ? Math.max(...goodPings).toFixed(0) : '-';
+  const majorEvents = events.filter(e => e.dur >= 1).length;
+  const totalOutageSec = events.reduce((a,e)=>a+e.dur,0).toFixed(1);
+  const durationSec = ((series[series.length-1].ts - series[0].ts)/1000).toFixed(0);
+
+  document.getElementById('stats').innerHTML = `
+    <div class="stat"><div class="label">Duration</div><div class="value">${durationSec}s</div></div>
+    <div class="stat"><div class="label">Total loss</div><div class="value bad">${lossPct}%</div></div>
+    <div class="stat"><div class="label">Packets lost</div><div class="value bad">${lost} / ${total}</div></div>
+    <div class="stat"><div class="label">Drop events</div><div class="value warn">${events.length}</div></div>
+    <div class="stat"><div class="label">Major outages (&ge;1s)</div><div class="value bad">${majorEvents}</div></div>
+    <div class="stat"><div class="label">Total time lost</div><div class="value bad">${totalOutageSec}s</div></div>
+    <div class="stat"><div class="label">Avg / Max ping</div><div class="value">${avgPing} / ${maxPing} ms</div></div>
+  `;
+
+  // ---- main latency chart ----
+  const labels = series.map(p => (p.tMs/1000).toFixed(1) + 's');
+  const data = series.map(p => p.ping);
+  const timestamps = series.map(p => p.ts);
+
+  if (mainChart) mainChart.destroy();
+  mainChart = new Chart(document.getElementById('mainChart'), {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: 'Ping (ms)',
+        data: data,
+        borderColor: '#5b9dff',
+        borderWidth: 1.2,
+        pointRadius: 0,
+        spanGaps: false,
+        tension: 0.1,
+      }]
+    },
+    options: {
+      responsive: true,
+      animation: false,
+      interaction: { mode: 'index', intersect: false },
+      scales: {
+        x: {
+          title: { display: true, text: 'Elapsed time', color: '#9099a8' },
+          ticks: { color: '#9099a8', maxTicksLimit: 16 },
+          grid: { color: '#2a2e38' }
+        },
+        y: {
+          title: { display: true, text: 'ms', color: '#9099a8' },
+          ticks: { color: '#9099a8' },
+          grid: { color: '#2a2e38' }
+        }
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            title: (items) => {
+              if (!items.length) return '';
+              return fmtTime(timestamps[items[0].dataIndex]);
+            },
+            label: (ctx) => ctx.raw === null ? 'PACKET LOST' : ctx.raw + ' ms'
+          }
+        }
+      }
+    }
+  });
+
+  // ---- loss density chart (10s buckets, real clock time) ----
+  const windowMs = 10000;
+  const t0 = series[0].ts;
+  const totalMs = series[series.length-1].tMs;
+  const nBuckets = Math.floor(totalMs / windowMs) + 1;
+  const bucketCounts = new Array(nBuckets).fill(0);
+  const bucketTotals = new Array(nBuckets).fill(0);
+  series.forEach(p => {
+    const b = Math.min(nBuckets-1, Math.floor(p.tMs/windowMs));
+    bucketTotals[b]++;
+    if (p.ping === null) bucketCounts[b]++;
+  });
+  const bucketStartTimes = bucketTotals.map((_, idx) => new Date(t0.getTime() + idx*windowMs));
+  const bucketEndTimes = bucketTotals.map((_, idx) => new Date(t0.getTime() + (idx+1)*windowMs));
+  const bucketLabels = bucketStartTimes.map(d => fmtTimeShort(d));
+  const bucketPct = bucketCounts.map((c,idx) => bucketTotals[idx] ? (100*c/bucketTotals[idx]) : 0);
+
+  if (lossChart) lossChart.destroy();
+  lossChart = new Chart(document.getElementById('lossChart'), {
+    type: 'bar',
+    data: {
+      labels: bucketLabels,
+      datasets: [{
+        label: 'Loss %',
+        data: bucketPct,
+        backgroundColor: bucketPct.map(v => v > 30 ? '#ff5c6c' : v > 5 ? '#ffb84d' : '#4dd68a'),
+        borderRadius: 3,
+      }]
+    },
+    options: {
+      responsive: true,
+      animation: false,
+      scales: {
+        x: {
+          title: { display: true, text: 'Window start (clock time)', color: '#9099a8' },
+          ticks: { color: '#9099a8', maxTicksLimit: 16 },
+          grid: { display: false }
+        },
+        y: {
+          title: { display: true, text: '% packets lost', color: '#9099a8' },
+          ticks: { color: '#9099a8' },
+          grid: { color: '#2a2e38' },
+          max: 100
+        }
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            title: (items) => {
+              if (!items.length) return '';
+              const idx = items[0].dataIndex;
+              return `${fmtTimeShort(bucketStartTimes[idx])} \u2013 ${fmtTimeShort(bucketEndTimes[idx])}`;
+            },
+            label: (ctx) => {
+              const idx = ctx.dataIndex;
+              return `${ctx.raw.toFixed(1)}% lost (${bucketCounts[idx]}/${bucketTotals[idx]} packets)`;
+            }
+          }
+        }
+      }
+    }
+  });
+
+  // ---- events table ----
+  const tbody = document.getElementById('eventsBody');
+  tbody.innerHTML = '';
+  events.forEach(e => {
+    const tr = document.createElement('tr');
+    const barWidth = Math.min(100, e.dur*4);
+    const badge = e.dur >= 1 ? '<span class="badge major">OUTAGE</span>' : '<span class="badge minor">blip</span>';
+    tr.innerHTML = `
+      <td>${e.startStr}</td>
+      <td>${e.endStr}</td>
+      <td class="dur-cell"><span class="dur-bar" style="width:${barWidth}px"></span>${e.dur.toFixed(2)}s</td>
+      <td>${e.count}</td>
+      <td>${badge}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+</script>
+</body>
+</html>
